@@ -1,117 +1,86 @@
-/**
- * Sample React Native App
- * https://github.com/facebook/react-native
- *
- * @format
- */
+import React, { useState } from 'react';
+import { ActivityIndicator, Button, SafeAreaView, ScrollView, StyleSheet, Text } from 'react-native';
+import { selectImage } from './src/SelectImage';
+// @ts-ignore
+import TesseractOcr, { LANG_ENGLISH } from '@onlytabs/react-native-tesseract-ocr';
 
-import React from 'react';
-import type {PropsWithChildren} from 'react';
-import {
-  SafeAreaView,
-  ScrollView,
-  StatusBar,
-  StyleSheet,
-  Text,
-  useColorScheme,
-  View,
-} from 'react-native';
+const tessOptions = {
+  whitelist: null,
+  blacklist: null,
+  psm: 7,
+  oem: 1,
+  dpi: 300,
+  LANG_ENGLISH,
+  // For iOS only
+  // For iOS, you can specify the language in the options like this:
+  // lang: 'LANG_ENGLISH',
+  // For Android, you can specify the language in the options like this:
+  // lang: 'eng',
+};
 
-import {
-  Colors,
-  DebugInstructions,
-  Header,
-  LearnMoreLinks,
-  ReloadInstructions,
-} from 'react-native/Libraries/NewAppScreen';
+function App() {
+  const [response, setResponse] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const [loading, setLoading] = useState<boolean>(false);
 
-type SectionProps = PropsWithChildren<{
-  title: string;
-}>;
 
-function Section({children, title}: SectionProps): React.JSX.Element {
-  const isDarkMode = useColorScheme() === 'dark';
-  return (
-    <View style={styles.sectionContainer}>
-      <Text
-        style={[
-          styles.sectionTitle,
-          {
-            color: isDarkMode ? Colors.white : Colors.black,
-          },
-        ]}>
-        {title}
-      </Text>
-      <Text
-        style={[
-          styles.sectionDescription,
-          {
-            color: isDarkMode ? Colors.light : Colors.dark,
-          },
-        ]}>
-        {children}
-      </Text>
-    </View>
-  );
-}
+  const handleImageUpload = async () => {
+    setError(null);
+    setLoading(true);
+    try {
 
-function App(): React.JSX.Element {
-  const isDarkMode = useColorScheme() === 'dark';
+      const imageUri = await selectImage();
+      console.log("Selected image:", imageUri);
 
-  const backgroundStyle = {
-    backgroundColor: isDarkMode ? Colors.darker : Colors.lighter,
+      // Use Tesseract OCR to extract text from the image
+      const extractedText = await TesseractOcr.recognize(imageUri, LANG_ENGLISH, tessOptions);
+      console.log('Extracted Text:', extractedText);
+      setResponse(extractedText);
+      setLoading(false);
+
+    } catch (error) {
+      console.log('Error during image processing:', error);
+      setError('Something went wrong. Please try again.');
+      setLoading(false);
+    }
   };
 
+
   return (
-    <SafeAreaView style={backgroundStyle}>
-      <StatusBar
-        barStyle={isDarkMode ? 'light-content' : 'dark-content'}
-        backgroundColor={backgroundStyle.backgroundColor}
-      />
-      <ScrollView
-        contentInsetAdjustmentBehavior="automatic"
-        style={backgroundStyle}>
-        <Header />
-        <View
-          style={{
-            backgroundColor: isDarkMode ? Colors.black : Colors.white,
-          }}>
-          <Section title="Step One">
-            Edit <Text style={styles.highlight}>App.tsx</Text> to change this
-            screen and then come back to see your edits.
-          </Section>
-          <Section title="See Your Changes">
-            <ReloadInstructions />
-          </Section>
-          <Section title="Debug">
-            <DebugInstructions />
-          </Section>
-          <Section title="Learn More">
-            Read the docs to discover what to do next:
-          </Section>
-          <LearnMoreLinks />
-        </View>
+    <SafeAreaView style={styles.container}>
+      <ScrollView>
+        {
+          loading ? (
+            // Show a loading spinner from react native
+            <ActivityIndicator />
+          ) : (
+            <Button title="Select Image" onPress={handleImageUpload} />
+          )
+        }
+        {response && <Text style={styles.responseText}>{response}</Text>}
+        {error && <Text style={styles.errorText}>{error}</Text>}
       </ScrollView>
     </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
-  sectionContainer: {
-    marginTop: 32,
-    paddingHorizontal: 24,
+  container: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 16,
+    backgroundColor: '#f0f0f0',
   },
-  sectionTitle: {
-    fontSize: 24,
-    fontWeight: '600',
+  responseText: {
+    marginTop: 20,
+    fontSize: 16,
+    color: 'black',
   },
-  sectionDescription: {
-    marginTop: 8,
-    fontSize: 18,
-    fontWeight: '400',
-  },
-  highlight: {
-    fontWeight: '700',
+  errorText: {
+    marginTop: 20,
+    fontSize: 16,
+    color: 'red',
   },
 });
 
